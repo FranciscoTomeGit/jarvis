@@ -6,6 +6,7 @@ class UIManager {
         this._voiceDot   = document.getElementById('voiceDot');
         this._voiceLabel = document.getElementById('voiceLabel');
         this._convList   = document.getElementById('convList');
+        this._orb        = new JarvisOrb(document.getElementById('orbCanvas'));
     }
 
     // ── Mode / signal ────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ class UIManager {
         if (mode === 'listening') this._equalizer.classList.add('listening');
         if (mode === 'speaking')  this._equalizer.classList.add('speaking');
         this._modeLabel.textContent = labels[mode] ?? 'STANDBY';
+        this._orb.setState(mode);
     }
 
     setVoiceStatus(isAvailable) {

@@ -395,6 +395,21 @@ header input {
   overflow: hidden;
 }
 
+/* Orb visualizer */
+.orb-section {
+  height: 280px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(0,212,255,0.08);
+  background: radial-gradient(ellipse at center, rgba(0,20,35,0.6) 0%, transparent 70%);
+}
+
+#orbCanvas {
+  position: absolute;
+  inset: 0;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;
