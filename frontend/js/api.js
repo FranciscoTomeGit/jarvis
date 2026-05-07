@@ -63,6 +63,7 @@ class JarvisAPI {
             for (const part of parts) {
                 if (!part.startsWith('data: ')) continue;
                 const payload = JSON.parse(part.slice(6));
+                if (payload.error) throw new Error('api_error');
                 if (payload.done) return;
                 yield payload.chunk;
             }

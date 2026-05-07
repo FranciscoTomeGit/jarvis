@@ -67,6 +67,8 @@ async def chat(conv_id: str, body: ChatRequest):
             async for chunk in claude.stream(history, SYSTEM_PROMPT):
                 full_reply += chunk
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception:
+            yield f"data: {json.dumps({'error': True})}\n\n"
         finally:
             if full_reply:
                 store.add_message(conv_id, "assistant", full_reply)

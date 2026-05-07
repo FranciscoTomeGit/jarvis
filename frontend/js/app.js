@@ -69,6 +69,13 @@ class JarvisApp {
 
         this._newChatBtn.addEventListener('click', () => this._createNewConversation());
 
+        // Window controls — only active when running inside Electron
+        if (window.electron) {
+            document.getElementById('windowControls').style.display = 'flex';
+            document.getElementById('minimizeBtn').addEventListener('click', () => window.electron.minimize());
+            document.getElementById('closeBtn').addEventListener('click', () => window.electron.close());
+        }
+
         this._convList.addEventListener('click', e => {
             const del = e.target.closest('.conv-delete-btn');
             if (del) {
@@ -105,7 +112,9 @@ class JarvisApp {
                 this._ui.updateStreamingMessage(bubble, fullReply);
             }
         } catch (err) {
-            bubble.textContent = `My apologies, sir — ${err.message}`;
+            const fallback = "My apologies, sir. It appears my neural link is unavailable at the moment. Please verify the API key is configured and try again.";
+            this._ui.updateStreamingMessage(bubble, fallback);
+            this._speech.speak(fallback);
             this._ui.setMode('error');
         }
 
