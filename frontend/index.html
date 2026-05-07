@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS</title>
+  <link rel="stylesheet" href="/static/css/jarvis.css">
+</head>
+<body>
+
+<div class="scanline"></div>
+
+<header>
+  <div class="logo">
+    <div class="arc-reactor">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="16" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+        <circle cx="18" cy="18" r="11" stroke="rgba(0,212,255,0.4)" stroke-width="1"/>
+        <circle cx="18" cy="18" r="6" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="18" cy="18" r="3" fill="#00d4ff" opacity="0.8"/>
+        <line x1="18" y1="2" x2="18" y2="7" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+        <line x1="18" y1="29" x2="18" y2="34" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+        <line x1="2" y1="18" x2="7" y2="18" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+        <line x1="29" y1="18" x2="34" y2="18" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">J.A.R.V.I.S</div>
+      <div class="logo-sub">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot"><div class="dot" id="aiDot"></div> AI ONLINE</div>
+    <div class="status-dot"><div class="dot yellow" id="voiceDot"></div> <span id="voiceLabel">VOICE READY</span></div>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <div class="conv-section">
+      <div class="panel-label">Conversations</div>
+      <button class="new-chat-btn" id="newChatBtn">+ NEW CHAT</button>
+      <div class="conv-list" id="convList"></div>
+    </div>
+
+    <div class="context-area">
+      <div class="panel-label">Code Context</div>
+      <textarea class="context-textarea" id="contextArea"
+        placeholder="// Paste code here for Jarvis to reference..."></textarea>
+    </div>
+
+    <div class="signal-section">
+      <div class="panel-label">Signal</div>
+      <div class="equalizer" id="equalizer">
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+      </div>
+      <div class="mode-label" id="modeLabel">STANDBY</div>
+    </div>
+
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-title">SYSTEM ONLINE</div>
+        <div class="welcome-sub">ALL SYSTEMS NOMINAL · AWAITING INSTRUCTION</div>
+        <div class="welcome-features">
+          <div class="feature">Ask anything</div>
+          <div class="feature">Code review</div>
+          <div class="feature">Voice input</div>
+          <div class="feature">Text to speech</div>
+          <div class="feature">Code context</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="input-box" id="inputBox"
+          placeholder="Give me an order, sir..."
+          rows="1"></textarea>
+        <button class="btn mic" id="micBtn" title="Click to speak">🎤</button>
+        <button class="btn send" id="sendBtn" title="Send (Enter)">⚡</button>
+      </div>
+      <div class="shortcuts">ENTER → SEND &nbsp;|&nbsp; SHIFT+ENTER → NEW LINE &nbsp;|&nbsp; 🎤 → VOICE INPUT</div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/speech.js"></script>
+<script src="/static/js/ui.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
