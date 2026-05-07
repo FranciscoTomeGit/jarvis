@@ -14,7 +14,9 @@
       "Bash(git remote *)",
       "Bash(cd \"c:/Users/kiko_/OneDrive/Área de Trabalho/Work/Jarvis\" && rm \"=0.40\" && git add . && git commit -m \"Remove accidentally created =0.40 file\")",
       "Bash(git push *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/api/speech/devices\" -Method GET -UseBasicParsing 2>&1)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/openapi.json\" -UseBasicParsing)"
     ],
     "additionalDirectories": [
       "C:\\Users\\kiko_\\OneDrive\\Área de Trabalho\\Work\\Jarvis"

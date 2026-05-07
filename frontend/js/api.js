@@ -1,74 +1,73 @@
 class JarvisAPI {
     async listInputDevices() {
-        const res = await fetch('/api/speech/devices');
-        if (!res.ok) throw new Error('Failed to fetch devices');
-        return res.json();
+        const response = await fetch('/api/speech/devices');
+        if (!response.ok) throw new Error('Failed to fetch devices');
+        return response.json();
     }
 
     async createConversation(title = 'New Chat') {
-        const res = await fetch('/api/conversations', {
+        const response = await fetch('/api/conversations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title }),
         });
-        if (!res.ok) throw new Error('Failed to create conversation');
-        return res.json();
+        if (!response.ok) throw new Error('Failed to create conversation');
+        return response.json();
     }
 
     async listConversations() {
-        const res = await fetch('/api/conversations');
-        if (!res.ok) throw new Error('Failed to list conversations');
-        return res.json();
+        const response = await fetch('/api/conversations');
+        if (!response.ok) throw new Error('Failed to list conversations');
+        return response.json();
     }
 
-    async getMessages(convId) {
-        const res = await fetch(`/api/conversations/${convId}/messages`);
-        if (!res.ok) throw new Error('Failed to load messages');
-        return res.json();
+    async getMessages(conversationId) {
+        const response = await fetch(`/api/conversations/${conversationId}/messages`);
+        if (!response.ok) throw new Error('Failed to load messages');
+        return response.json();
     }
 
-    async renameConversation(convId, title) {
-        const res = await fetch(`/api/conversations/${convId}`, {
+    async renameConversation(conversationId, title) {
+        const response = await fetch(`/api/conversations/${conversationId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title }),
         });
-        if (!res.ok) throw new Error('Failed to rename conversation');
+        if (!response.ok) throw new Error('Failed to rename conversation');
     }
 
-    async deleteConversation(convId) {
-        const res = await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete conversation');
+    async deleteConversation(conversationId) {
+        const response = await fetch(`/api/conversations/${conversationId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete conversation');
     }
 
-    // Async generator that yields text chunks from the SSE stream.
-    async *streamChat(convId, message, context = '') {
-        const res = await fetch(`/api/conversations/${convId}/chat`, {
+    async *streamChat(conversationId, message, context = '') {
+        const response = await fetch(`/api/conversations/${conversationId}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message, context }),
         });
 
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || 'Chat request failed');
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.detail || 'Chat request failed');
         }
 
-        const reader = res.body.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
+        let pendingData = '';
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop();
+            pendingData += decoder.decode(value, { stream: true });
+            const sseFrames = pendingData.split('\n\n');
+            pendingData = sseFrames.pop();
 
-            for (const part of parts) {
-                if (!part.startsWith('data: ')) continue;
-                const payload = JSON.parse(part.slice(6));
+            for (const frame of sseFrames) {
+                if (!frame.startsWith('data: ')) continue;
+                const payload = JSON.parse(frame.slice(6));
                 if (payload.error) throw new Error('api_error');
                 if (payload.done) return;
                 yield payload.chunk;

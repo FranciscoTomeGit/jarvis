@@ -1,11 +1,11 @@
 class UIManager {
     constructor() {
         this._messagesEl = document.getElementById('messages');
-        this._equalizer = document.getElementById('equalizer');
-        this._modeLabel = document.getElementById('modeLabel');
-        this._voiceDot = document.getElementById('voiceDot');
+        this._equalizer  = document.getElementById('equalizer');
+        this._modeLabel  = document.getElementById('modeLabel');
+        this._voiceDot   = document.getElementById('voiceDot');
         this._voiceLabel = document.getElementById('voiceLabel');
-        this._convList = document.getElementById('convList');
+        this._convList   = document.getElementById('convList');
     }
 
     // ── Mode / signal ────────────────────────────────────────────────────────
@@ -13,21 +13,21 @@ class UIManager {
     setMode(mode) {
         this._equalizer.classList.remove('listening', 'speaking');
         const labels = {
-            idle: 'STANDBY',
+            idle:      'STANDBY',
             listening: 'LISTENING...',
-            thinking: 'PROCESSING...',
-            speaking: 'SPEAKING...',
-            error: 'ERROR',
+            thinking:  'PROCESSING...',
+            speaking:  'SPEAKING...',
+            error:     'ERROR',
         };
         if (mode === 'listening') this._equalizer.classList.add('listening');
-        if (mode === 'speaking') this._equalizer.classList.add('speaking');
+        if (mode === 'speaking')  this._equalizer.classList.add('speaking');
         this._modeLabel.textContent = labels[mode] ?? 'STANDBY';
     }
 
-    setVoiceStatus(available) {
-        if (available) {
-            this._voiceDot.style.background = '#00ffaa';
-            this._voiceDot.style.boxShadow = '0 0 6px #00ffaa';
+    setVoiceStatus(isAvailable) {
+        if (isAvailable) {
+            this._voiceDot.style.background  = '#00ffaa';
+            this._voiceDot.style.boxShadow   = '0 0 6px #00ffaa';
             this._voiceLabel.textContent = 'VOICE READY';
         } else {
             this._voiceDot.classList.add('red');
@@ -58,57 +58,34 @@ class UIManager {
 
     appendMessage(role, content) {
         this._removeWelcome();
-        const div = this._buildMessageEl(role, content);
-        this._messagesEl.appendChild(div);
+        const messageEl = this._buildMessageEl(role, content);
+        this._messagesEl.appendChild(messageEl);
         this._scrollToBottom();
-        return div;
+        return messageEl;
     }
 
     showTypingIndicator() {
         this._removeWelcome();
-        const div = document.createElement('div');
-        div.className = 'message jarvis';
-        div.id = 'typing';
-
-        const avatar = document.createElement('div');
-        avatar.className = 'avatar jarvis';
-        avatar.textContent = 'J';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
+        const { wrapper, bubble } = this._createJarvisMessageFrame();
+        wrapper.id = 'typing';
         bubble.innerHTML = `<div class="typing-indicator">
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
         </div>`;
-
-        div.appendChild(avatar);
-        div.appendChild(bubble);
-        this._messagesEl.appendChild(div);
+        this._messagesEl.appendChild(wrapper);
         this._scrollToBottom();
-        return div;
+        return wrapper;
     }
 
     removeTypingIndicator() {
         document.getElementById('typing')?.remove();
     }
 
-    // Returns a live bubble element for in-place streaming updates.
-    startStreamingMessage() {
+    createStreamingBubble() {
         this._removeWelcome();
-        const div = document.createElement('div');
-        div.className = 'message jarvis';
-
-        const avatar = document.createElement('div');
-        avatar.className = 'avatar jarvis';
-        avatar.textContent = 'J';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-
-        div.appendChild(avatar);
-        div.appendChild(bubble);
-        this._messagesEl.appendChild(div);
+        const { wrapper, bubble } = this._createJarvisMessageFrame();
+        this._messagesEl.appendChild(wrapper);
         this._scrollToBottom();
         return bubble;
     }
@@ -122,30 +99,14 @@ class UIManager {
 
     renderConversationList(conversations, activeId) {
         this._convList.innerHTML = '';
-        for (const conv of conversations) {
-            const item = document.createElement('div');
-            item.className = 'conv-item' + (conv.id === activeId ? ' active' : '');
-            item.dataset.id = conv.id;
-
-            const title = document.createElement('span');
-            title.className = 'conv-item-title';
-            title.textContent = conv.title;
-
-            const del = document.createElement('button');
-            del.className = 'conv-delete-btn';
-            del.textContent = '✕';
-            del.title = 'Delete';
-            del.dataset.id = conv.id;
-
-            item.appendChild(title);
-            item.appendChild(del);
-            this._convList.appendChild(item);
+        for (const conversation of conversations) {
+            this._convList.appendChild(this._buildConversationItem(conversation, activeId));
         }
     }
 
-    setActiveConversation(convId) {
-        this._convList.querySelectorAll('.conv-item').forEach(el => {
-            el.classList.toggle('active', el.dataset.id === convId);
+    setActiveConversation(conversationId) {
+        this._convList.querySelectorAll('.conv-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.id === conversationId);
         });
     }
 
@@ -155,9 +116,25 @@ class UIManager {
         document.getElementById('welcome')?.remove();
     }
 
+    _createJarvisMessageFrame() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message jarvis';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar jarvis';
+        avatar.textContent = 'J';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(bubble);
+        return { wrapper, bubble };
+    }
+
     _buildMessageEl(role, content) {
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
+        const wrapper = document.createElement('div');
+        wrapper.className = `message ${role}`;
 
         const avatar = document.createElement('div');
         avatar.className = `avatar ${role}`;
@@ -167,21 +144,45 @@ class UIManager {
         bubble.className = 'bubble';
         bubble.innerHTML = this._formatContent(content);
 
-        div.appendChild(avatar);
-        div.appendChild(bubble);
-        return div;
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(bubble);
+        return wrapper;
+    }
+
+    _buildConversationItem(conversation, activeId) {
+        const item = document.createElement('div');
+        item.className = 'conv-item' + (conversation.id === activeId ? ' active' : '');
+        item.dataset.id = conversation.id;
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'conv-item-title';
+        titleEl.textContent = conversation.title;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'conv-delete-btn';
+        deleteButton.textContent = '✕';
+        deleteButton.title = 'Delete';
+        deleteButton.dataset.id = conversation.id;
+
+        item.appendChild(titleEl);
+        item.appendChild(deleteButton);
+        return item;
     }
 
     _formatContent(text) {
         return text
-            .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) =>
-                `<pre>${this._esc(code.trim())}</pre>`)
-            .replace(/`([^`\n]+)`/g, (_, c) => `<code>${this._esc(c)}</code>`)
+            .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _languageHint, code) =>
+                `<pre>${this._escapeHtml(code.trim())}</pre>`)
+            .replace(/`([^`\n]+)`/g, (_, inlineCode) =>
+                `<code>${this._escapeHtml(inlineCode)}</code>`)
             .replace(/\n/g, '<br>');
     }
 
-    _esc(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    _escapeHtml(rawText) {
+        return rawText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     _scrollToBottom() {
