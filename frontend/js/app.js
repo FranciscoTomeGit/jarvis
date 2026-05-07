@@ -13,6 +13,7 @@ class JarvisApp {
         this._contextArea = document.getElementById('contextArea');
         this._newChatBtn = document.getElementById('newChatBtn');
         this._convList = document.getElementById('convList');
+        this._deviceSelect = document.getElementById('deviceSelect');
     }
 
     async init() {
@@ -28,6 +29,7 @@ class JarvisApp {
         });
 
         this._bindEvents();
+        await this._initDeviceSelector();
 
         const convos = await this._api.listConversations();
         if (convos.length > 0) {
@@ -193,6 +195,40 @@ class JarvisApp {
 
         const updated = await this._api.listConversations();
         this._ui.renderConversationList(updated, this._convId);
+    }
+
+    async _initDeviceSelector() {
+        if (!window.electron) {
+            this._deviceSelect.closest('.device-section').style.display = 'none';
+            return;
+        }
+
+        try {
+            const devices = await this._api.listInputDevices();
+            console.log('[Devices] Found:', devices.map(d => `${d.index}: ${d.name}`));
+            devices.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.index;
+                opt.textContent = d.name;
+                this._deviceSelect.appendChild(opt);
+            });
+
+            // Restore saved preference
+            const saved = localStorage.getItem('jarvis_input_device');
+            if (saved !== null) {
+                this._deviceSelect.value = saved;
+                this._speech.setDevice(saved === '' ? null : Number(saved));
+            }
+        } catch (err) {
+            console.error('[Devices] Failed to load input devices:', err);
+        }
+
+        this._deviceSelect.addEventListener('change', () => {
+            const val = this._deviceSelect.value;
+            localStorage.setItem('jarvis_input_device', val);
+            this._speech.setDevice(val === '' ? null : Number(val));
+            console.log('[Mic] Device changed to:', val || 'default');
+        });
     }
 
     _setLoading(on) {

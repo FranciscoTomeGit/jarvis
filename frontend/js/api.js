@@ -1,4 +1,10 @@
 class JarvisAPI {
+    async listInputDevices() {
+        const res = await fetch('/api/speech/devices');
+        if (!res.ok) throw new Error('Failed to fetch devices');
+        return res.json();
+    }
+
     async createConversation(title = 'New Chat') {
         const res = await fetch('/api/conversations', {
             method: 'POST',

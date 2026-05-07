@@ -12,3 +12,6 @@ class ConversationRename(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     context: str = ""
+
+class SpeechListenRequest(BaseModel):
+    device: int | None = None

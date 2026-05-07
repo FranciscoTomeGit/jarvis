@@ -1,10 +1,11 @@
 import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from backend.api.models import ChatRequest, ConversationCreate, ConversationRename
+from backend.api.models import ChatRequest, ConversationCreate, ConversationRename, SpeechListenRequest
 from backend.config import settings, SYSTEM_PROMPT
 from backend.services.gemini_client import ClaudeClient
 from backend.services.conversation_store import ConversationStore
+from backend.services.speech_service import SpeechService, SpeechTranscriptionError
 
 router = APIRouter(prefix="/api")
 
@@ -14,6 +15,7 @@ claude = ClaudeClient(
     model=settings.model,
     max_tokens=settings.max_tokens,
 )
+speech = SpeechService()
 
 
 @router.post("/conversations", status_code=201)
@@ -75,3 +77,17 @@ async def chat(conv_id: str, body: ChatRequest):
             yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.get("/speech/devices")
+def speech_devices():
+    return speech.list_devices()
+
+
+@router.post("/speech/listen")
+async def speech_listen(body: SpeechListenRequest = SpeechListenRequest()):
+    try:
+        text = await speech.listen(device=body.device)
+        return {"text": text}
+    except SpeechTranscriptionError as e:
+        raise HTTPException(status_code=422, detail=str(e))

@@ -1,4 +1,7 @@
+import logging
 from fastapi import FastAPI
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.database import init_db

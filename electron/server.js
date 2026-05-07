@@ -16,7 +16,7 @@ class PythonServer {
 
         this._process = spawn('python', ['run.py'], {
             cwd: root,
-            env: { ...process.env },
+            env: { ...process.env, ELECTRON: '1' },
             windowsHide: true,  // don't flash a console window on Windows
         });
 

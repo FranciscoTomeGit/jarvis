@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog, session } = require('electron');
 const path = require('path');
 const PythonServer = require('./server');
 const TrayManager = require('./tray');
@@ -37,6 +37,11 @@ class JarvisApp {
             app.quit();
             return;
         }
+
+        // Grant microphone access for Web Speech API
+        session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+            callback(permission === 'media');
+        });
 
         this._createWindow();
         this._tray.create();
