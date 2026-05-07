@@ -3,14 +3,14 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from backend.api.models import ChatRequest, ConversationCreate, ConversationRename
 from backend.config import settings, SYSTEM_PROMPT
-from backend.services.gemini_client import GeminiClient
+from backend.services.gemini_client import ClaudeClient
 from backend.services.conversation_store import ConversationStore
 
 router = APIRouter(prefix="/api")
 
 store = ConversationStore()
-claude = GeminiClient(
-    api_key=settings.gemini_api_key,
+claude = ClaudeClient(
+    api_key=settings.anthropic_api_key,
     model=settings.model,
     max_tokens=settings.max_tokens,
 )

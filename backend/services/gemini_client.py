@@ -1,34 +1,21 @@
 from collections.abc import AsyncIterator
-from google import genai
-from google.genai import types
+import anthropic
 
 
-class GeminiClient:
+class ClaudeClient:
     def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
-        self._client = genai.Client(api_key=api_key)
+        self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
         self._max_tokens = max_tokens
 
     async def stream(
         self, messages: list[dict], system: str
     ) -> AsyncIterator[str]:
-        contents = [
-            types.Content(
-                role="model" if msg["role"] == "assistant" else msg["role"],
-                parts=[types.Part(text=msg["content"])],
-            )
-            for msg in messages
-        ]
-
-        config = types.GenerateContentConfig(
-            system_instruction=system,
-            max_output_tokens=self._max_tokens,
-        )
-
-        async for chunk in await self._client.aio.models.generate_content_stream(
+        async with self._client.messages.stream(
             model=self._model,
-            contents=contents,
-            config=config,
-        ):
-            if chunk.text:
-                yield chunk.text
+            max_tokens=self._max_tokens,
+            system=system,
+            messages=messages,
+        ) as stream:
+            async for chunk in stream.text_stream:
+                yield chunk

@@ -10,8 +10,8 @@ Never use markdown headers. Use plain text or code blocks only."""
 
 
 class Settings(BaseSettings):
-    gemini_api_key: str
-    model: str = "gemini-2.0-flash"
+    anthropic_api_key: str
+    model: str = "claude-sonnet-4-6"
     max_tokens: int = 2048
     db_path: str = "data/conversations.db"
 
