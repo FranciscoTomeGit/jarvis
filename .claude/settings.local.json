@@ -11,7 +11,11 @@
       "Bash(git commit *)",
       "Bash(gh repo *)",
       "PowerShell(gh repo create jarvis --private --source \"c:/Users/kiko_/OneDrive/�rea de Trabalho/Work/Jarvis\" --push)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(cd \"c:/Users/kiko_/OneDrive/Área de Trabalho/Work/Jarvis\" && rm \"=0.40\" && git add . && git commit -m \"Remove accidentally created =0.40 file\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\kiko_\\OneDrive\\Área de Trabalho\\Work\\Jarvis"
     ]
   }
 }
