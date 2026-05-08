@@ -603,12 +603,53 @@ header input {
 }
 .btn.send:hover { background: rgba(0,212,255,0.2); }
 
-.shortcuts {
+.bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 8px;
+}
+
+.shortcuts {
   font-family: 'Share Tech Mono', monospace;
   font-size: 10px;
   color: var(--muted);
   letter-spacing: 1px;
+}
+
+.speed-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speed-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin-right: 2px;
+}
+
+.speed-btn {
+  background: none;
+  border: 1px solid rgba(0,212,255,0.15);
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 2px 7px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+.speed-btn:hover {
+  border-color: rgba(0,212,255,0.4);
+  color: var(--text);
+}
+.speed-btn.active {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(0,212,255,0.08);
 }
 
 /* Scanline effect */

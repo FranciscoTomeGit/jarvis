@@ -67,6 +67,15 @@ class JarvisApp {
 
         this._newChatBtn.addEventListener('click', () => this._createNewConversation());
 
+        document.getElementById('speedControls').addEventListener('click', event => {
+            const button = event.target.closest('.speed-btn');
+            if (!button) return;
+            const rate = parseFloat(button.dataset.rate);
+            this._speech.setPlaybackRate(rate);
+            document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        });
+
         if (window.electron) {
             document.getElementById('windowControls').style.display = 'flex';
             document.getElementById('minimizeBtn').addEventListener('click', () => window.electron.minimize());

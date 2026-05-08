@@ -3,6 +3,7 @@ class SpeechManager {
         this._synth               = window.speechSynthesis;
         this._recognition         = null;
         this._selectedDevice      = null;
+        this._playbackRate        = 1;
         this._listening           = false;
         this._speaking            = false;
         this._onListeningChange   = null;
@@ -30,6 +31,11 @@ class SpeechManager {
         this._selectedDevice = index != null ? Number(index) : null;
     }
 
+    setPlaybackRate(rate) {
+        this._playbackRate = rate;
+        if (this._currentAudio) this._currentAudio.playbackRate = rate;
+    }
+
     // ── Listening ─────────────────────────────────────────────────────────────
 
     startListening(onResult) {
@@ -54,17 +60,16 @@ class SpeechManager {
     // ── Speaking ──────────────────────────────────────────────────────────────
 
     speak(text) {
-        // Cancel anything currently playing or being fetched
         if (this._synthesisController) this._synthesisController.abort();
         this._stopCurrentAudio();
         if (this._synth) this._synth.cancel();
 
-        this._setSpeaking(true);
         const cleanText = this._cleanTextForSpeech(text);
-
         this._synthesisController = new AbortController();
         const { signal } = this._synthesisController;
 
+        // Note: _setSpeaking(true) is NOT called here — it fires when audio
+        // actually starts, avoiding a race with setMode('idle') in _handleSend.
         this._playViaBackend(cleanText, signal).catch(() => {
             if (!signal.aborted) this._playViaBrowser(cleanText);
         });
@@ -104,7 +109,6 @@ class SpeechManager {
 
     _startListeningViaBrowserApi(onResult) {
         if (!this._recognition) return;
-
         this._recognition.onresult = (event) => {
             const text = event.results[0][0].transcript;
             this._setListening(false);
@@ -112,7 +116,6 @@ class SpeechManager {
         };
         this._recognition.onerror = () => this._setListening(false);
         this._recognition.onend   = () => this._setListening(false);
-
         this._recognition.start();
         this._setListening(true);
     }
@@ -131,6 +134,10 @@ class SpeechManager {
         const audioBlob = await response.blob();
         const audioUrl  = URL.createObjectURL(audioBlob);
         this._currentAudio = new Audio(audioUrl);
+        this._currentAudio.playbackRate = this._playbackRate;
+
+        // Signal speaking only when audio is ready — not during the fetch delay
+        this._setSpeaking(true);
 
         return new Promise((resolve) => {
             const cleanup = () => {
@@ -146,13 +153,11 @@ class SpeechManager {
     }
 
     _playViaBrowser(text) {
-        if (!this._synth) {
-            this._setSpeaking(false);
-            return;
-        }
-        const utterance   = this._buildUtterance(text);
-        utterance.onend   = () => this._setSpeaking(false);
-        utterance.onerror = () => this._setSpeaking(false);
+        if (!this._synth) return;
+        const utterance    = this._buildUtterance(text);
+        utterance.onstart  = () => this._setSpeaking(true);
+        utterance.onend    = () => this._setSpeaking(false);
+        utterance.onerror  = () => this._setSpeaking(false);
         this._synth.speak(utterance);
     }
 
@@ -175,7 +180,7 @@ class SpeechManager {
 
     _buildUtterance(text) {
         const utterance  = new SpeechSynthesisUtterance(text);
-        utterance.rate   = 0.95;
+        utterance.rate   = 0.95 * this._playbackRate;
         utterance.pitch  = 0.85;
         utterance.volume = 1;
 
