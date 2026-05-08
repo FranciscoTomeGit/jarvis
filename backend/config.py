@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     max_tokens: int = 2048
     db_path: str = "data/conversations.db"
 
+    # ElevenLabs TTS — optional; falls back to browser TTS if not set
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "onwK4e9ZLuTAKqWW03F9"  # Daniel — British authoritative male
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

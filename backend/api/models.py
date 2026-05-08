@@ -13,5 +13,10 @@ class ChatRequest(BaseModel):
     message: str
     context: str = ""
 
+
 class SpeechListenRequest(BaseModel):
     device: int | None = None
+
+
+class SynthesisRequest(BaseModel):
+    text: str

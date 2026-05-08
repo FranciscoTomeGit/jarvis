@@ -1,11 +1,12 @@
 import json
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from backend.api.models import ChatRequest, ConversationCreate, ConversationRename, SpeechListenRequest
+from fastapi.responses import Response, StreamingResponse
+from backend.api.models import ChatRequest, ConversationCreate, ConversationRename, SpeechListenRequest, SynthesisRequest
 from backend.config import settings, SYSTEM_PROMPT
 from backend.services.claude_client import ClaudeClient
 from backend.services.conversation_store import ConversationStore
 from backend.services.speech_service import SpeechService, SpeechTranscriptionError
+from backend.services.tts_service import TTSService
 
 router = APIRouter(prefix="/api")
 
@@ -16,6 +17,10 @@ claude = ClaudeClient(
     max_tokens=settings.max_tokens,
 )
 speech = SpeechService()
+tts    = TTSService(
+    api_key=settings.elevenlabs_api_key,
+    voice_id=settings.elevenlabs_voice_id,
+)
 
 
 def _require_conversation(conversation_id: str) -> None:
@@ -96,3 +101,14 @@ async def speech_listen(body: SpeechListenRequest = SpeechListenRequest()):
         return {"text": text}
     except SpeechTranscriptionError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.post("/speech/synthesize")
+async def synthesize_speech(body: SynthesisRequest):
+    if not tts.is_configured:
+        raise HTTPException(status_code=503, detail="ElevenLabs not configured — add ELEVENLABS_API_KEY to .env")
+    try:
+        audio_bytes = await tts.synthesize(body.text)
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"TTS service error: {error}")

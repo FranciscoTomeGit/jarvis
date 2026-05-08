@@ -1,32 +1,36 @@
 class SpeechManager {
     constructor() {
-        this._synth = window.speechSynthesis;
-        this._recognition = null;
-        this._selectedDevice = null;
-        this._listening = false;
-        this._speaking = false;
-        this._onListeningChange = null;
-        this._onSpeakingChange = null;
+        this._synth               = window.speechSynthesis;
+        this._recognition         = null;
+        this._selectedDevice      = null;
+        this._listening           = false;
+        this._speaking            = false;
+        this._onListeningChange   = null;
+        this._onSpeakingChange    = null;
+        this._currentAudio        = null;
+        this._synthesisController = null;
 
         const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognitionConstructor) {
             this._recognition = new SpeechRecognitionConstructor();
-            this._recognition.continuous = false;
-            this._recognition.interimResults = false;
-            this._recognition.lang = 'en-US';
+            this._recognition.continuous     = false;
+            this._recognition.interimResults  = false;
+            this._recognition.lang            = 'en-US';
         }
     }
 
     get isAvailable() { return window.electron != null || this._recognition !== null; }
-    get isListening() { return this._listening; }
-    get isSpeaking() { return this._speaking; }
+    get isListening()  { return this._listening; }
+    get isSpeaking()   { return this._speaking; }
 
     onListeningChange(callback) { this._onListeningChange = callback; }
-    onSpeakingChange(callback) { this._onSpeakingChange = callback; }
+    onSpeakingChange(callback)  { this._onSpeakingChange  = callback; }
 
     setDevice(index) {
         this._selectedDevice = index != null ? Number(index) : null;
     }
+
+    // ── Listening ─────────────────────────────────────────────────────────────
 
     startListening(onResult) {
         if (this._listening) return;
@@ -47,22 +51,33 @@ class SpeechManager {
         this._setListening(false);
     }
 
-    speak(text) {
-        if (!this._synth) return;
-        this._synth.cancel();
+    // ── Speaking ──────────────────────────────────────────────────────────────
 
-        const utterance = this._buildUtterance(this._cleanTextForSpeech(text));
-        utterance.onstart = () => this._setSpeaking(true);
-        utterance.onend   = () => this._setSpeaking(false);
-        utterance.onerror = () => this._setSpeaking(false);
-        this._synth.speak(utterance);
+    speak(text) {
+        // Cancel anything currently playing or being fetched
+        if (this._synthesisController) this._synthesisController.abort();
+        this._stopCurrentAudio();
+        if (this._synth) this._synth.cancel();
+
+        this._setSpeaking(true);
+        const cleanText = this._cleanTextForSpeech(text);
+
+        this._synthesisController = new AbortController();
+        const { signal } = this._synthesisController;
+
+        this._playViaBackend(cleanText, signal).catch(() => {
+            if (!signal.aborted) this._playViaBrowser(cleanText);
+        });
     }
 
     stopSpeaking() {
+        if (this._synthesisController) this._synthesisController.abort();
+        this._stopCurrentAudio();
         if (this._synth) this._synth.cancel();
+        this._setSpeaking(false);
     }
 
-    // ── Private ───────────────────────────────────────────────────────────────
+    // ── Private: listening ────────────────────────────────────────────────────
 
     async _startListeningViaPython(onResult) {
         this._setListening(true);
@@ -102,6 +117,56 @@ class SpeechManager {
         this._setListening(true);
     }
 
+    // ── Private: speaking ─────────────────────────────────────────────────────
+
+    async _playViaBackend(text, signal) {
+        const response = await fetch('/api/speech/synthesize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+            signal,
+        });
+        if (!response.ok) throw new Error(`TTS ${response.status}`);
+
+        const audioBlob = await response.blob();
+        const audioUrl  = URL.createObjectURL(audioBlob);
+        this._currentAudio = new Audio(audioUrl);
+
+        return new Promise((resolve) => {
+            const cleanup = () => {
+                URL.revokeObjectURL(audioUrl);
+                this._currentAudio = null;
+                this._setSpeaking(false);
+                resolve();
+            };
+            this._currentAudio.onended = cleanup;
+            this._currentAudio.onerror = cleanup;
+            this._currentAudio.play().catch(cleanup);
+        });
+    }
+
+    _playViaBrowser(text) {
+        if (!this._synth) {
+            this._setSpeaking(false);
+            return;
+        }
+        const utterance   = this._buildUtterance(text);
+        utterance.onend   = () => this._setSpeaking(false);
+        utterance.onerror = () => this._setSpeaking(false);
+        this._synth.speak(utterance);
+    }
+
+    _stopCurrentAudio() {
+        if (this._currentAudio) {
+            this._currentAudio.onended = null;
+            this._currentAudio.onerror = null;
+            this._currentAudio.pause();
+            this._currentAudio = null;
+        }
+    }
+
+    // ── Private: text prep & utterance ────────────────────────────────────────
+
     _cleanTextForSpeech(text) {
         return text
             .replace(/```[\s\S]*?```/g, 'code block omitted')
@@ -109,20 +174,22 @@ class SpeechManager {
     }
 
     _buildUtterance(text) {
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance  = new SpeechSynthesisUtterance(text);
         utterance.rate   = 0.95;
         utterance.pitch  = 0.85;
         utterance.volume = 1;
 
         const preferredVoice = this._synth.getVoices().find(voice =>
-            voice.name.includes('Daniel')     ||
-            voice.name.includes('Alex')       ||
-            voice.name.includes('Google UK')  ||
+            voice.name.includes('Daniel')    ||
+            voice.name.includes('Alex')      ||
+            voice.name.includes('Google UK') ||
             voice.lang === 'en-GB'
         );
         if (preferredVoice) utterance.voice = preferredVoice;
         return utterance;
     }
+
+    // ── Private: state ────────────────────────────────────────────────────────
 
     _setListening(isActive) {
         this._listening = isActive;
