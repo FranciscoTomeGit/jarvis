@@ -1,4 +1,25 @@
 class JarvisAPI {
+    subscribeToCallEvents(onEvent) {
+        const eventSource = new EventSource('/api/call/events');
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type !== 'ping') onEvent(data);
+        };
+        eventSource.onerror = () => console.warn('[Call] SSE connection lost — will retry');
+        return eventSource;
+    }
+
+    async startCall() {
+        const response = await fetch('/api/call/start', { method: 'POST' });
+        if (!response.ok) throw new Error('Failed to start call');
+    }
+
+    async endCall() {
+        const response = await fetch('/api/call/end', { method: 'POST' });
+        if (!response.ok) throw new Error('Failed to end call');
+    }
+
+
     async listInputDevices() {
         const response = await fetch('/api/speech/devices');
         if (!response.ok) throw new Error('Failed to fetch devices');

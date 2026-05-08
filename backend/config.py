@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "onwK4e9ZLuTAKqWW03F9"  # Daniel — British authoritative male
 
+    # Picovoice wake word — optional; get a free key at picovoice.ai
+    picovoice_access_key: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

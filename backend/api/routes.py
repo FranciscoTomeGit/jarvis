@@ -1,5 +1,7 @@
+import asyncio
 import json
-from fastapi import APIRouter, HTTPException
+import logging
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from backend.api.models import ChatRequest, ConversationCreate, ConversationRename, SpeechListenRequest, SynthesisRequest
 from backend.config import settings, SYSTEM_PROMPT
@@ -7,6 +9,9 @@ from backend.services.claude_client import ClaudeClient
 from backend.services.conversation_store import ConversationStore
 from backend.services.speech_service import SpeechService, SpeechTranscriptionError
 from backend.services.tts_service import TTSService
+from backend.services.call_service import CallService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
@@ -21,6 +26,19 @@ tts    = TTSService(
     api_key=settings.elevenlabs_api_key,
     voice_id=settings.elevenlabs_voice_id,
 )
+call_service = CallService(speech=speech, tts=tts, claude=claude, store=store)
+
+wake_word_service = None
+if settings.picovoice_access_key:
+    try:
+        from backend.services.wake_word_service import WakeWordService
+        wake_word_service = WakeWordService(
+            access_key=settings.picovoice_access_key,
+            on_wake=call_service.trigger_from_thread,
+        )
+        call_service.set_wake_word_service(wake_word_service)
+    except ImportError:
+        logger.warning("[WakeWord] pvporcupine not installed — wake word disabled")
 
 
 def _require_conversation(conversation_id: str) -> None:
@@ -112,3 +130,35 @@ async def synthesize_speech(body: SynthesisRequest):
         return Response(content=audio_bytes, media_type="audio/mpeg")
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"TTS service error: {error}")
+
+
+@router.get("/call/events")
+async def call_events(request: Request):
+    queue = call_service.subscribe()
+
+    async def event_stream():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield "data: {\"type\":\"ping\"}\n\n"
+        finally:
+            call_service.unsubscribe(queue)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.post("/call/start")
+async def start_call():
+    await call_service.start_call()
+    return {"ok": True}
+
+
+@router.post("/call/end")
+async def end_call():
+    await call_service.end_call()
+    return {"ok": True}

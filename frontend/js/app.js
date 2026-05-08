@@ -14,6 +14,8 @@ class JarvisApp {
         this._newChatBtn   = document.getElementById('newChatBtn');
         this._convList     = document.getElementById('convList');
         this._deviceSelect = document.getElementById('deviceSelect');
+        this._callBtn      = document.getElementById('callBtn');
+        this._callActive   = false;
     }
 
     async init() {
@@ -29,6 +31,7 @@ class JarvisApp {
         });
 
         this._bindEvents();
+        this._initCallMode();
         await this._initDeviceSelector();
 
         const conversations = await this._api.listConversations();
@@ -203,6 +206,51 @@ class JarvisApp {
 
         current.title = title;
         this._ui.renderConversationList(conversations, this._activeConversationId);
+    }
+
+    // ── Call mode ─────────────────────────────────────────────────────────────
+
+    _initCallMode() {
+        this._api.subscribeToCallEvents(event => this._handleCallEvent(event));
+
+        this._callBtn.addEventListener('click', async () => {
+            if (this._callActive) {
+                await this._api.endCall();
+            } else {
+                await this._api.startCall();
+            }
+        });
+    }
+
+    _handleCallEvent(event) {
+        switch (event.type) {
+            case 'call_started':
+                this._callActive = true;
+                this._ui.setCallActive(true);
+                this._activeConversationId = event.conversationId;
+                this._ui.clearChat();
+                break;
+
+            case 'state':
+                this._ui.setMode(event.value);
+                break;
+
+            case 'message':
+                this._ui.appendMessage(
+                    event.role === 'assistant' ? 'jarvis' : 'user',
+                    event.text
+                );
+                break;
+
+            case 'call_ended':
+                this._callActive = false;
+                this._ui.setCallActive(false);
+                this._ui.setMode('idle');
+                this._api.listConversations().then(conversations => {
+                    this._ui.renderConversationList(conversations, this._activeConversationId);
+                });
+                break;
+        }
     }
 
     // ── Device selector ───────────────────────────────────────────────────────

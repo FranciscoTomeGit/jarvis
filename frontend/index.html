@@ -32,7 +32,12 @@
   <div class="status-bar">
     <div class="status-dot"><div class="dot" id="aiDot"></div> AI ONLINE</div>
     <div class="status-dot"><div class="dot yellow" id="voiceDot"></div> <span id="voiceLabel">VOICE READY</span></div>
+    <div class="call-indicator" id="callIndicator">
+      <div class="dot call-dot"></div> CALL ACTIVE
+    </div>
   </div>
+
+  <button class="call-btn" id="callBtn" title="Start call — or say 'JARVIS'">📞</button>
 
   <!-- Window controls — only visible when running inside Electron -->
   <div class="window-controls" id="windowControls">

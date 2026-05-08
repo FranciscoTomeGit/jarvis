@@ -26,6 +26,14 @@ class UIManager {
         this._orb.setState(mode);
     }
 
+    setCallActive(isActive) {
+        const indicator = document.getElementById('callIndicator');
+        const button    = document.getElementById('callBtn');
+        indicator.style.display = isActive ? 'flex' : 'none';
+        button.classList.toggle('active', isActive);
+        button.title = isActive ? 'End call' : "Start call — or say 'JARVIS'";
+    }
+
     setVoiceStatus(isAvailable) {
         if (isAvailable) {
             this._voiceDot.style.background  = '#00ffaa';
