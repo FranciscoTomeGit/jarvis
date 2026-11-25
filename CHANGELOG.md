@@ -4,6 +4,37 @@ All notable changes to J.A.R.V.I.S. are documented here.
 
 ---
 
+## V0.7 — Local Brain & Ears
+*Free local LLM via Ollama, local speech recognition via Whisper, no-gap mic recording*
+
+### Added
+- **Ollama support** — `OllamaClient` streams replies from a local model (default `gemma3:12b`) via Ollama's `/api/chat`. Free, offline, conversations never leave the PC. Raises `num_ctx` to 8192 so long conversations aren't silently truncated.
+- **`LLM_PROVIDER` switch** — `ollama` (default) or `anthropic`, selected by `create_llm_client()` in `llm.py`. `ANTHROPIC_API_KEY` is now optional.
+- **Ollama lifecycle management** — Jarvis starts `ollama serve` on launch and stops it on exit. On Windows the server is bound to Jarvis through a Job Object (`KILL_ON_JOB_CLOSE`), so it dies even when Electron force-kills Python. An Ollama instance already running (e.g. the Ollama app) is left alone. The model unloads from VRAM after 10 idle minutes (`OLLAMA_KEEP_ALIVE`).
+- **Local speech recognition** — `WhisperTranscriber` runs faster-whisper `large-v3-turbo` on the GPU (~0.3 s per sentence), falling back to CPU, and to Google Web Speech if Whisper is unavailable (`STT_ENGINE=google`). Audio never leaves the PC. The model is warmed up in the background at startup and loaded from the local cache without contacting Hugging Face.
+- `STT_LANGUAGE` setting (`en`, `pt`, … or empty for auto-detect).
+- CUDA libraries (`nvidia-cublas-cu12`, `nvidia-cudnn-cu12`) installed via pip and exposed to faster-whisper at runtime — no system-wide CUDA install needed.
+
+### Fixed
+- **Dropped audio between chunks** — the recorder reopened the mic every 0.3 s with `sd.rec()`, losing audio in the gaps and garbling words. Now records from one continuous `sd.InputStream`.
+- **Sentences cut mid-thought** — silence cutoff raised from 1.5 s to 2 s.
+- LLM streaming errors are now logged instead of silently swallowed.
+
+---
+
+## V0.6 — Call Mode
+*Always-on hands-free conversation with "Jarvis" wake word*
+
+### Added
+- **Wake word** — `WakeWordService` listens in a background thread with Picovoice Porcupine using the built-in `jarvis` keyword. Optional: only enabled when `PICOVOICE_ACCESS_KEY` is set.
+- **Call mode loop** — `CallService` runs listen → think → speak repeatedly until an exit phrase ("goodbye jarvis", "bye jarvis", "end call", "that's all") or a silence timeout. On errors, JARVIS apologises and keeps listening instead of ending the call.
+- Wake word pauses during a call and resumes afterwards, so the two never fight over the mic.
+- `TTSService.synthesize_pcm()` — ElevenLabs PCM 16 kHz output played via `sounddevice`, no decoder needed.
+- `GET /api/call/events` (SSE, one queue per client, 15 s keepalive ping), `POST /api/call/start`, `POST /api/call/end`.
+- **Frontend** — 📞 call button in the header with a green glow while active, CALL ACTIVE indicator with pulsing dot, and call events routed to the orb, chat and indicator.
+
+---
+
 ## V0.5 — JARVIS Voice
 *ElevenLabs neural TTS, speech speed control, orb animation sync fix*
 

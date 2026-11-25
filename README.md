@@ -4,7 +4,7 @@
 
 A personal AI desktop assistant with a sci-fi interface inspired by Iron Man's JARVIS. Built with a FastAPI Python backend, a vanilla JS frontend, and an Electron shell — runs as a native desktop app with system tray integration, a holographic orb visualizer, neural TTS voice, voice input, streaming responses, and persistent conversation history.
 
-![Version](https://img.shields.io/badge/version-V0.5-00d4ff?style=flat-square)
+![Version](https://img.shields.io/badge/version-V0.7-00d4ff?style=flat-square)
 ![Stack](https://img.shields.io/badge/stack-Electron%20%2B%20FastAPI%20%2B%20Vanilla%20JS-00d4ff?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)
 
@@ -233,4 +233,4 @@ $20 in Anthropic credits lasts approximately 3–6 months at typical personal us
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-**Current: V0.5** — ElevenLabs neural TTS, speech speed control, holographic orb, Python voice I/O, Electron desktop shell.
+**Current: V0.7** — Local LLM via Ollama, local Whisper speech recognition, always-on call mode with wake word, ElevenLabs neural TTS, holographic orb, Electron desktop shell.
