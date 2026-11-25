@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from backend.api.models import ChatRequest, ConversationCreate, ConversationRename, SpeechListenRequest, SynthesisRequest
 from backend.config import settings, SYSTEM_PROMPT
-from backend.services.claude_client import ClaudeClient
+from backend.services.llm import create_llm_client
 from backend.services.conversation_store import ConversationStore
 from backend.services.speech_service import SpeechService, SpeechTranscriptionError
 from backend.services.tts_service import TTSService
@@ -16,12 +16,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 store = ConversationStore()
-claude = ClaudeClient(
-    api_key=settings.anthropic_api_key,
-    model=settings.model,
-    max_tokens=settings.max_tokens,
+claude = create_llm_client(settings)
+speech = SpeechService(
+    engine=settings.stt_engine,
+    whisper_model=settings.whisper_model,
+    whisper_device=settings.whisper_device,
+    language=settings.stt_language,
 )
-speech = SpeechService()
 tts    = TTSService(
     api_key=settings.elevenlabs_api_key,
     voice_id=settings.elevenlabs_voice_id,
@@ -97,6 +98,7 @@ async def chat(conversation_id: str, body: ChatRequest):
                 reply_chunks.append(chunk)
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
         except Exception:
+            logger.exception("LLM streaming failed")
             yield f"data: {json.dumps({'error': True})}\n\n"
         finally:
             full_reply = "".join(reply_chunks)

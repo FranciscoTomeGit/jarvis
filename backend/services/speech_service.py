@@ -1,17 +1,17 @@
 import asyncio
 import io
 import logging
+import queue
 import wave
 import numpy as np
 import sounddevice as sd
-import speech_recognition as sr
 
 logger = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
-CHUNK_DURATION_SECONDS = 0.3
+CHUNK_DURATION_SECONDS = 0.1
 SILENCE_THRESHOLD_RMS = 300
-SILENCE_CUTOFF_SECONDS = 1.5
+SILENCE_CUTOFF_SECONDS = 2.0
 MAX_RECORDING_DURATION_SECONDS = 30
 
 
@@ -20,13 +20,30 @@ class SpeechTranscriptionError(Exception):
 
 
 class SpeechService:
-    def __init__(self) -> None:
-        self._recognizer = sr.Recognizer()
+    def __init__(self, engine: str = "google", whisper_model: str = "large-v3-turbo",
+                 whisper_device: str = "auto", language: str = "en") -> None:
+        self._language = language
+        self._whisper = None
+        if engine.strip().lower() == "whisper":
+            try:
+                from backend.services.whisper_transcriber import WhisperTranscriber
+                self._whisper = WhisperTranscriber(whisper_model, whisper_device, language)
+            except ImportError:
+                logger.warning("[Speech] faster-whisper not installed — falling back to Google speech recognition")
         try:
             device_info = sd.query_devices(kind='input')
             logger.info(f"[Speech] Default input device: {device_info['name']}")
         except Exception as error:
             logger.warning(f"[Speech] Could not query default device: {error}")
+
+    def warm_up(self) -> None:
+        """Load the local speech model ahead of time (blocking — run in a thread)."""
+        if self._whisper:
+            try:
+                self._whisper.load()
+            except Exception as error:
+                logger.error(f"[Speech] {error} — falling back to Google speech recognition")
+                self._whisper = None
 
     @staticmethod
     def list_devices() -> list[dict]:
@@ -50,6 +67,7 @@ class SpeechService:
         return self._transcribe(audio_data)
 
     def _record_until_silence(self, device: int | None = None) -> np.ndarray:
+        """Record from one continuous input stream (no gaps between chunks) until silence."""
         chunk_samples = int(SAMPLE_RATE * CHUNK_DURATION_SECONDS)
         silence_chunks_needed = int(SILENCE_CUTOFF_SECONDS / CHUNK_DURATION_SECONDS)
         max_chunks = int(MAX_RECORDING_DURATION_SECONDS / CHUNK_DURATION_SECONDS)
@@ -57,34 +75,31 @@ class SpeechService:
         chunks: list[np.ndarray] = []
         consecutive_silence_chunks = 0
         speech_has_started = False
+        audio_queue: queue.Queue[np.ndarray] = queue.Queue()
+
+        def on_audio(indata, frames, time_info, status):
+            if status:
+                logger.warning(f"[Speech] Stream status: {status}")
+            audio_queue.put(indata.copy())
 
         device_info = sd.query_devices(device=device, kind='input')
         logger.info(f"[Speech] Listening on: {device_info['name']}")
 
-        for chunk_index in range(max_chunks):
-            chunk = sd.rec(
-                chunk_samples,
-                samplerate=SAMPLE_RATE,
-                channels=1,
-                dtype='int16',
-                device=device,
-            )
-            sd.wait()
-            chunks.append(chunk)
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='int16',
+                            blocksize=chunk_samples, device=device, callback=on_audio):
+            for _ in range(max_chunks):
+                chunk = audio_queue.get(timeout=5)
+                chunks.append(chunk)
 
-            rms = self._compute_rms(chunk)
-            is_silent = rms < SILENCE_THRESHOLD_RMS
-            logger.info(f"[Speech] Chunk {chunk_index + 1:02d} | RMS={rms:5d} | {'silent' if is_silent else 'SPEECH'}")
-
-            if not is_silent:
-                speech_has_started = True
-                consecutive_silence_chunks = 0
-            elif speech_has_started:
-                consecutive_silence_chunks += 1
-                logger.info(f"[Speech] Silence {consecutive_silence_chunks}/{silence_chunks_needed}")
-                if consecutive_silence_chunks >= silence_chunks_needed:
-                    logger.info("[Speech] Silence cutoff reached — stopping recording.")
-                    break
+                is_silent = self._compute_rms(chunk) < SILENCE_THRESHOLD_RMS
+                if not is_silent:
+                    speech_has_started = True
+                    consecutive_silence_chunks = 0
+                elif speech_has_started:
+                    consecutive_silence_chunks += 1
+                    if consecutive_silence_chunks >= silence_chunks_needed:
+                        logger.info("[Speech] Silence cutoff reached — stopping recording.")
+                        break
 
         if not speech_has_started:
             raise SpeechTranscriptionError("No speech detected — please try again.")
@@ -106,15 +121,27 @@ class SpeechService:
         return wav_buffer
 
     def _transcribe(self, audio_data: np.ndarray) -> str:
-        wav_buffer = self._encode_as_wav(audio_data)
-        logger.info(f"[Speech] Sending {len(audio_data)} samples for transcription...")
-        try:
-            with sr.AudioFile(wav_buffer) as source:
-                audio = self._recognizer.record(source)
-            text = self._recognizer.recognize_google(audio)
-            logger.info(f"[Speech] Transcribed: '{text}'")
-            return text
-        except sr.UnknownValueError:
+        if self._whisper:
+            try:
+                text = self._whisper.transcribe(audio_data)
+            except Exception as error:
+                raise SpeechTranscriptionError(f"Local speech recognition failed: {error}")
+        else:
+            text = self._transcribe_with_google(audio_data)
+        if not text:
             raise SpeechTranscriptionError("Could not understand audio — please try again.")
+        logger.info(f"[Speech] Transcribed: '{text}'")
+        return text
+
+    def _transcribe_with_google(self, audio_data: np.ndarray) -> str:
+        import speech_recognition as sr
+        recognizer = sr.Recognizer()
+        google_language = {"en": "en-US", "pt": "pt-PT"}.get(self._language, "en-US")
+        try:
+            with sr.AudioFile(self._encode_as_wav(audio_data)) as source:
+                audio = recognizer.record(source)
+            return recognizer.recognize_google(audio, language=google_language)
+        except sr.UnknownValueError:
+            return ""
         except sr.RequestError as error:
             raise SpeechTranscriptionError(f"Speech service unavailable: {error}")

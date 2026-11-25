@@ -33,7 +33,7 @@ Electron shell  (frameless window, system tray, Ctrl+Shift+J)
       ↕  spawns on startup
 Python / FastAPI  (AI brain, TTS, mic recording, conversation storage)
       ↕  calls
-Anthropic Claude API  (claude-sonnet-4-6)   +   ElevenLabs TTS API
+Ollama (local, free)  or  Anthropic Claude API   +   ElevenLabs TTS API
       ↕  future
 OS tools  (file system, apps, desktop control via tool use)
 ```
@@ -48,9 +48,9 @@ The Python backend is the long-term "brain" — Claude tool use will be added he
 |-------|-----------|
 | Desktop shell | Electron 33 |
 | Backend | Python 3.11+, FastAPI, Uvicorn |
-| AI | Anthropic Claude API (`claude-sonnet-4-6`) |
+| AI | Ollama local models (default, `gemma3:12b`) or Anthropic Claude API — set `LLM_PROVIDER` |
 | Voice (TTS) | ElevenLabs API (`eleven_multilingual_v2`) |
-| Voice (input) | sounddevice + SpeechRecognition |
+| Voice (input) | sounddevice + faster-whisper (`large-v3-turbo`, local on GPU); Google Web Speech fallback via `STT_ENGINE=google` |
 | Database | SQLite via Python `sqlite3` stdlib |
 | Frontend | Vanilla HTML, CSS, JavaScript (Canvas API for orb) |
 | Streaming | Server-Sent Events (SSE) |
@@ -130,7 +130,11 @@ npm install
 Copy `.env.example` to `.env`:
 
 ```env
-# Required
+# Model backend: "ollama" (local, free) or "anthropic" (paid API)
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=gemma3:12b
+
+# Only needed when LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-your_key_here
 MODEL=claude-sonnet-4-6
 MAX_TOKENS=2048
@@ -143,7 +147,8 @@ ELEVENLABS_API_KEY=your_elevenlabs_key_here
 ELEVENLABS_VOICE_ID=onwK4e9ZLuTAKqWW03F9
 ```
 
-- Anthropic key: [console.anthropic.com](https://console.anthropic.com)
+- Ollama: install from [ollama.com](https://ollama.com), then `ollama pull gemma3:12b` (any model from the Ollama library works)
+- Anthropic key (optional): [console.anthropic.com](https://console.anthropic.com)
 - ElevenLabs key: [elevenlabs.io](https://elevenlabs.io) — free tier is enough for daily personal use
 
 ### 5. Add an app icon (optional)

@@ -8,7 +8,7 @@ import sounddevice as sd
 from backend.config import SYSTEM_PROMPT
 from backend.services.speech_service import SpeechService, SpeechTranscriptionError
 from backend.services.tts_service import TTSService
-from backend.services.claude_client import ClaudeClient
+from backend.services.llm import LLMClient
 from backend.services.conversation_store import ConversationStore
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class CallService:
         self,
         speech: SpeechService,
         tts: TTSService,
-        claude: ClaudeClient,
+        claude: LLMClient,
         store: ConversationStore,
     ) -> None:
         self._speech  = speech
